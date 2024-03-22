@@ -1,4 +1,4 @@
-# Western Electric rules 
+# Nelson rules & Western Electric rules 
 #
 # A process is out of control if either
 # 1. One point plots outside 3-sigma control limits.

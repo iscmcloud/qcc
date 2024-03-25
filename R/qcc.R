@@ -363,7 +363,7 @@ plot.qcc <- function(x, xtime = NULL,
   }
         
   # draw control limits
-  if(any(object$rules == 1))
+  if(any((object$rules == 1) | (object$rules == 11) | (object$rules == 21)))
   { 
     # x1 <- x2 <- c(df$group, df$group[length(df$group)]+1)-0.5
     dx <- min(diff(df$group))/2
@@ -410,7 +410,7 @@ plot.qcc <- function(x, xtime = NULL,
   }
   
   # draw 2-sigma warning limits
-  if(any(object$rules == 2))
+  if(any((object$rules == 2) | (object$rules == 15) | (object$rules == 25) ))
   { 
     limits.2sigma <- do.call(paste("limits.", object$type, sep = ""), 
                              list(center = object$center, 
@@ -459,7 +459,7 @@ plot.qcc <- function(x, xtime = NULL,
   }
   
   # draw 1-sigma warning limits
-  if(any(object$rules == 3))
+  if(any((object$rules == 3) | (object$rules == 16) | (object$rules == 26)))
   { 
     limits.2sigma <- do.call(paste("limits.", object$type, sep = ""), 
                              list(center = object$center, 

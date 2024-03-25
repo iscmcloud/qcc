@@ -559,8 +559,8 @@ plot.qcc <- function(x, xtime = NULL,
                    paste0("UCL = " ,if(length(unique(ucl)) == 1) 
                      signif(ucl[1], digits) else "variable"), sep = "\n")
     text3 <- paste("",
-                   paste0("Number beyond limits = ", sum(violations==1, na.rm=TRUE)),
-                   paste0("Number violating runs = ", sum(violations > 1, na.rm=TRUE)), sep = "\n")
+                   paste0("Number beyond limits = ", sum(violations==1 | violations==11 | violations==21, na.rm=TRUE)),
+                   paste0("Number violating runs = ", sum(violations > 1 & violations != 11 & violations != 21, na.rm=TRUE)), sep = "\n")
     
     tab1 <- tab_base + 
       geom_text(aes(x = -Inf, y = Inf), label = text1, 

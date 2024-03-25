@@ -100,7 +100,48 @@ qccRules <- function(object, rules = object$rules)
     wer <- qccRulesViolatingWER11(object)
     out[wer] <- 11
   }
-  attr(out, "WesternElectricRules") <- rules
+  # AIAG rules
+  if(any(rules == 28)) 
+  {  
+    wer <- qccRulesViolatingWER28(object)
+    out[wer] <- 28
+  }
+  if(any(rules == 27)) 
+  {  
+    wer <- qccRulesViolatingWER27(object)
+    out[wer] <- 27
+  }
+  if(any(rules == 26)) 
+  {  
+    wer <- qccRulesViolatingWER26(object)
+    out[wer] <- 26
+  }
+  if(any(rules == 25)) 
+  {  
+    wer <- qccRulesViolatingWER25(object)
+    out[wer] <- 25
+  }
+  if(any(rules == 24)) 
+  {  
+    wer <- qccRulesViolatingWER24(object)
+    out[wer] <- 24
+  }
+  if(any(rules == 23)) 
+  {  
+    wer <- qccRulesViolatingWER23(object)
+    out[wer] <- 23
+  }
+  if(any(rules == 22)) 
+  {  
+    wer <- qccRulesViolatingWER22(object)
+    out[wer] <- 22
+  }
+  if(any(rules == 21)) 
+  {  
+    wer <- qccRulesViolatingWER21(object)
+    out[wer] <- 21
+  }
+  attr(out, "WesternElectricRules(1,2,3,4), NelsonRules(11,12,13,14,15,16,17,18), AIAGRules(21,22,23,24,25,26,27,28)") <- rules
   return(out)
 }
 
@@ -308,16 +349,219 @@ qccRulesViolatingWER13 <- function(object) {
   return(violators)
 }
 
-qccRulesViolatingWER17 <- function(object, limits = object$limits)
+qccRulesViolatingWER17 <- function(object, 
+                                  run.points = 15,
+                                  run.length = 15,
+                                  k = object$nsigmas*1/3)
 {
-  # Return cases beyond control limits (WER #17)
+  # Return indices of points violating runs
+  center     <- object$center
+  statistics <- c(object$statistics, object$newstats)
+  limits     <- paste("limits.", object$type, sep = "")
+  limits     <- do.call(limits, list(center = object$center, 
+                                     std.dev = object$std.dev,
+                                     sizes = c(object$sizes, object$newsizes),
+                                     nsigmas = k))
+  i <- if(nrow(limits) > 1) seq(run.length, length(statistics)) else 1
+  values <- statistics
+  current_state <- ifelse((values[1] > limits[i,1]) &  (values[1] < limits[i,2]), "inrange", "outrange")
+  counter_seq <- c(1)
+  result_seq <- c()
+  for (j in 2:(length(values))) {
+    next_state <- ifelse((values[j] > limits[i,1]) &  (values[j] < limits[i,2]), "inrange", "outrange")
+    if (next_state == current_state) {
+      counter_seq <- c(counter_seq, j)  
+    } else {
+      if (length(counter_seq) >= run.length ) {
+        result_seq <- c(result_seq, counter_seq)
+      }
+      counter_seq <- c(j)	  
+    }
+    current_state <- next_state
+  }
   violators <- numeric()
+  violators <- c(result_seq)
   return(violators)
 }
 
 qccRulesViolatingWER11 <- function(object, limits = object$limits)
 {
   # Return cases beyond control limits (WER #11)
+  statistics <- c(object$statistics, object$newstats) 
+  lcl <- limits[,1]
+  ucl <- limits[,2]
+  index.above.ucl <- seq(along = statistics)[statistics > ucl]
+  index.below.lcl <- seq(along = statistics)[statistics < lcl]
+  return(c(index.above.ucl, index.below.lcl))
+}
+
+
+qccRulesViolatingWER25<- function(object, 
+                                  run.points = 2,
+                                  run.length = 3,
+                                  k = object$nsigmas*2/3)
+{
+  # Return indices of points violating runs
+  center     <- object$center
+  statistics <- c(object$statistics, object$newstats)
+  limits     <- paste("limits.", object$type, sep = "")
+  limits     <- do.call(limits, list(center = object$center, 
+                                     std.dev = object$std.dev,
+                                     sizes = c(object$sizes, object$newsizes),
+                                     nsigmas = k))
+  i <- if(nrow(limits) > 1) seq(run.length, length(statistics)) else 1
+  viol.above <- embed(statistics, run.length) > limits[i,2]
+  viol.above <- which(apply(viol.above, 1, sum) >= run.points & viol.above[,1])
+  viol.above <- viol.above + (run.length-1)
+  viol.below <- embed(statistics, run.length) < limits[i,1]
+  viol.below <- which(apply(viol.below, 1, sum) >= run.points & viol.below[,1])
+  viol.below <- viol.below + (run.length-1)
+  return(c(viol.above, viol.below))
+}
+
+qccRulesViolatingWER26 <- function(object, ...)
+{
+  qccRulesViolatingWER2(object, 
+                        run.points = 4,
+                        run.length = 5,
+                        k = object$nsigmas*1/3)
+} 
+
+
+qccRulesViolatingWER22 <- function(object)
+{
+  # Return indices of points violating runs (WER #22)
+  run.length <- 7
+  center <- object$center
+  statistics <- c(object$statistics, object$newstats)
+  cl <- object$limits
+  diffs <- statistics - center
+  diffs[diffs > 0] <- 1
+  diffs[diffs < 0] <- -1
+  runs <- rle(diffs)
+  vruns <- rep(runs$lengths >= run.length, runs$lengths)
+  vruns.above <- (vruns & (diffs > 0))
+  vruns.below <- (vruns & (diffs < 0))
+  rvruns.above <- rle(vruns.above)
+  rvruns.below <- rle(vruns.below)
+  vbeg.above <- cumsum(rvruns.above$lengths)[rvruns.above$values] -
+    (rvruns.above$lengths - run.length)[rvruns.above$values]
+  vend.above <- cumsum(rvruns.above$lengths)[rvruns.above$values]
+  vbeg.below <- cumsum(rvruns.below$lengths)[rvruns.below$values] -
+    (rvruns.below$lengths - run.length)[rvruns.below$values]
+  vend.below <- cumsum(rvruns.below$lengths)[rvruns.below$values]
+  violators <- numeric()
+  if (length(vbeg.above)) 
+  { for (i in 1:length(vbeg.above))
+    violators <- c(violators, vbeg.above[i]:vend.above[i]) }
+  if (length(vbeg.below)) 
+  { for (i in 1:length(vbeg.below))
+    violators <- c(violators, vbeg.below[i]:vend.below[i]) }
+  return(violators)
+}
+
+qccRulesViolatingWER28 <- function(object, ...)
+{
+  qccRulesViolatingWER2(object, 
+                        run.points = 8,
+                        run.length = 8,
+                        k = object$nsigmas*1/3)
+} 
+
+qccRulesViolatingWER24 <- function(object) {
+  # Return indices of points violating runs (WER #24)
+  run.length <- 14
+  statistics <- c(object$statistics, object$newstats)
+
+  values <- statistics
+  current_state <- ifelse(values[1] > values[2], "increasing", ifelse(values[1] < values[2], "decreasing", "unchanged"))
+  counter_seq <- c(1)
+  result_seq <- c()
+  # Check all points
+  for (i in 2:(length(values) - 1)) {
+    next_state <- ifelse(values[i] > values[i + 1], "increasing", ifelse(values[i] < values[i + 1], "decreasing", "unchanged"))
+    if (next_state != current_state & next_state != "unchanged") {
+      counter_seq <- c(counter_seq, i)  
+    } else {
+      if (length(counter_seq) >= run.length ) {
+        result_seq <- c(result_seq, counter_seq)
+      }
+      counter_seq <- c()	  
+    }
+    current_state <- next_state
+  }
+
+  violators <- numeric()
+  violators <- c(result_seq)
+  return(violators)
+}
+
+qccRulesViolatingWER23 <- function(object) {
+  # Return indices of points violating runs (WER #23)
+  run.length <- 6
+  statistics <- c(object$statistics, object$newstats)
+
+  values <- statistics
+  current_state <- ifelse(values[1] > values[2], "increasing", ifelse(values[1] < values[2], "decreasing", "unchanged"))
+  counter_seq <- c(1)
+  result_seq <- c()
+  # Check all points
+  for (i in 2:(length(values) - 1)) {
+    next_state <- ifelse(values[i] > values[i + 1], "increasing", ifelse(values[i] < values[i + 1], "decreasing", "unchanged"))
+    if (next_state == current_state & next_state != "unchanged") {
+      counter_seq <- c(counter_seq, i)  
+    } else {
+      if (length(counter_seq) >= run.length ) {
+        result_seq <- c(result_seq, counter_seq)
+      }
+      counter_seq <- c(i)	  
+    }
+    current_state <- next_state
+  }
+
+  violators <- numeric()
+  violators <- c(result_seq)
+  return(violators)
+}
+
+qccRulesViolatingWER27 <- function(object, 
+                                  run.points = 15,
+                                  run.length = 15,
+                                  k = object$nsigmas*1/3)
+{
+  # Return indices of points violating runs
+  center     <- object$center
+  statistics <- c(object$statistics, object$newstats)
+  limits     <- paste("limits.", object$type, sep = "")
+  limits     <- do.call(limits, list(center = object$center, 
+                                     std.dev = object$std.dev,
+                                     sizes = c(object$sizes, object$newsizes),
+                                     nsigmas = k))
+  i <- if(nrow(limits) > 1) seq(run.length, length(statistics)) else 1
+  values <- statistics
+  current_state <- ifelse((values[1] > limits[i,1]) &  (values[1] < limits[i,2]), "inrange", "outrange")
+  counter_seq <- c(1)
+  result_seq <- c()
+  for (j in 2:(length(values))) {
+    next_state <- ifelse((values[j] > limits[i,1]) &  (values[j] < limits[i,2]), "inrange", "outrange")
+    if (next_state == current_state) {
+      counter_seq <- c(counter_seq, j)  
+    } else {
+      if (length(counter_seq) >= run.length ) {
+        result_seq <- c(result_seq, counter_seq)
+      }
+      counter_seq <- c(j)	  
+    }
+    current_state <- next_state
+  }
+  violators <- numeric()
+  violators <- c(result_seq)
+  return(violators)
+}
+
+qccRulesViolatingWER21 <- function(object, limits = object$limits)
+{
+  # Return cases beyond control limits (WER #21)
   statistics <- c(object$statistics, object$newstats) 
   lcl <- limits[,1]
   ucl <- limits[,2]
